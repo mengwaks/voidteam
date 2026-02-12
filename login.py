@@ -65,6 +65,7 @@ def menu_utama():
             pilihan = input(" Pilih menu (1-3): ")
             
             if pilihan == '1':
+            void_scanner.run_scanner("VOID_ACCESS_GRANTED_2026")
                 print("\n[!] Sedang menginstall bahan...")
                 time.sleep(2)
             elif pilihan == '2':
