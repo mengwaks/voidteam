@@ -39,7 +39,7 @@ def get_logo():
 def intro_animasi():
     try:
         sys.stdout.write("\033[?25l")
-        for i in range(50): 
+        for i in range(100): 
             sys.stdout.write("\033[H")
             sys.stdout.write(rgb_text(get_logo(), i * 0.2)) 
             sys.stdout.flush()
