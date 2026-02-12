@@ -3,12 +3,12 @@ import time
 import sys
 import math
 
-# --- KONFIGURASI PASSWORD (OBFUSCATED) ---
 PASSWORD_RAHASIA = "".join([chr(x) for x in [111, 109, 101, 110, 103, 103, 97, 110, 116, 101, 110, 103]])
 
-# --- FUNGSI WARNA & GAMBAR (BAGIAN MEWAH) ---
+def bersihkan_layar():
+    os.system('clear')
+
 def rgb_text(text, offset):
-    """Membuat teks menjadi warna-warni RGB bergerak"""
     colored_chars = []
     FREQ = 0.1
     for i, char in enumerate(text):
@@ -22,7 +22,6 @@ def rgb_text(text, offset):
     return "".join(colored_chars) + "\033[0m"
 
 def get_logo():
-    """Logo Burung Hantu VOID TEAM"""
     return r"""
  ░▒▓██████▓▒░         ▄▄██████▄▄         ░▒▓██████▓▒░
  ░▒▓██▓▒░           ▄████████████▄           ░▒▓██▓▒░
@@ -34,62 +33,60 @@ def get_logo():
         ╔══════════════════════════════════╗
         ║    V  O  I  D     T  E  A  M     ║
         ╚══════════════════════════════════╝
-           [ NFT HASH: 0xVOID-ALPHA-001 ]
+           [ 0xVOID-INISIAL-V-001 ]
     """
 
 def intro_animasi():
-    """Memutar animasi RGB selama 3 detik sebelum masuk menu"""
     try:
-        sys.stdout.write("\033[?25l") # Sembunyikan kursor
-        for i in range(40): # Jalan sekitar 2-3 detik
-            sys.stdout.write("\033[H") # Kursor ke atas (biar gak kedip)
-            # Render logo dengan warna berjalan (offset i * 0.2)
+        sys.stdout.write("\033[?25l")
+        for i in range(50): 
+            sys.stdout.write("\033[H")
             sys.stdout.write(rgb_text(get_logo(), i * 0.2)) 
             sys.stdout.flush()
-            time.sleep(0.05)
-    except:
+            time.sleep(0.04)
+    except KeyboardInterrupt:
         pass
     finally:
-        sys.stdout.write("\033[?25h") # Munculkan kursor lagi
+        sys.stdout.write("\033[?25h")
 
-# --- FUNGSI UTAMA ---
+def menu_utama():
+    while True:
+        bersihkan_layar()
+        print(rgb_text(get_logo(), 5)) 
+        
+        print("\n\033[1;32m [ MENU UTAMA - INISIAL V ]\033[0m")
+        print("========================================")
+        print(" 1. Install Bahan")
+        print(" 2. Jalankan Script Hack")
+        print(" 3. Keluar")
+        print("========================================")
+        
+        try:
+            pilihan = input(" Pilih menu (1-3): ")
+            
+            if pilihan == '1':
+                print("\n[!] Sedang menginstall bahan...")
+                time.sleep(2)
+            elif pilihan == '2':
+                print("\n[!] Menjalankan Script...")
+                time.sleep(2)
+            elif pilihan == '3':
+                print("\nGood Bye, Master!")
+                sys.exit()
+            else:
+                print(f"\n[!] Menu {pilihan} tidak ada.")
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\nGood Bye, Master!")
+            sys.exit()
 
-def bersihkan_layar():
-    os.system('clear')
-
-def banner_login():
-    # Banner simpel khusus untuk halaman login
+def login():
+    bersihkan_layar()
     print("\033[1;36m")
     print("========================================")
     print("    Where Logic Ends, The Void Begins   ")
     print("========================================")
     print("\033[0m")
-
-def menu_utama():
-    bersihkan_layar()
-    
-    # Tampilkan Logo VOID TEAM (Static tapi berwarna RGB mewah)
-    print(rgb_text(get_logo(), 5)) 
-    
-    print("\n\033[1;32m [ MENU UTAMA - INISIAL V ]\033[0m")
-    print("========================================")
-    print(" 1. Install Bahan")
-    print(" 2. Jalankan Script Hack")
-    print(" 3. Keluar")
-    print("========================================")
-    
-    pilihan = input(" Pilih menu (1-3): ")
-    if pilihan == '3':
-        print("\nGood Bye, Master!")
-        sys.exit()
-    else:
-        print(f"\n[!] Kamu memilih menu {pilihan}. (Fitur ini belum dibuat)")
-        time.sleep(2)
-        menu_utama() # Kembali ke menu
-
-def login():
-    bersihkan_layar()
-    banner_login()
     
     kesempatan = 3
     
@@ -98,20 +95,19 @@ def login():
         print(f"[!] Kesempatan: {kesempatan}x lagi\033[0m")
         
         try:
-            password = input("Password: ")
+            password = input("Password: ").strip()
         except KeyboardInterrupt:
-            print("\nKeluar paksa...")
             sys.exit()
+
+        if not password:
+            print("\n\033[1;31m[!] Password tidak boleh kosong!\033[0m\n")
+            continue
 
         if password == PASSWORD_RAHASIA:
             print("\n\033[1;32m[+] AKSES DITERIMA! Selamat datang Boss.\033[0m")
             time.sleep(1)
-            
-            # --- INI BAGIAN YANG DITAMBAHKAN ---
             bersihkan_layar()
-            intro_animasi() # Memutar animasi burung hantu RGB
-            # -----------------------------------
-            
+            intro_animasi()
             menu_utama()
             break
         else:
