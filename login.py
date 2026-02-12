@@ -2,6 +2,7 @@ import os
 import time
 import sys
 import math
+import void_scanner
 
 PASSWORD_RAHASIA = "".join([chr(x) for x in [111, 109, 101, 110, 103, 103, 97, 110, 116, 101, 110, 103]])
 
@@ -23,12 +24,12 @@ def rgb_text(text, offset):
 
 def get_logo():
     return r"""
- ░▒▓██████▓▒░     ▄▄██████▄▄     ░▒▓██████▓▒░
- ░▒▓██▓▒░       ▄████████████▄       ░▒▓██▓▒░
- ░▒▓██▓▒░      ███ ▀▄ ▓▓ ▄▀ ███      ░▒▓██▓▒░
- ░▒▓██▓▒░      ███ ▓▓ ▼▼ ▓▓ ███      ░▒▓██▓▒░
- ░▒▓██▓▒░       ▀████████████▀       ░▒▓██▓▒░
-  ░▒▓██▓▒░        ▀▀██████▀▀        ░▒▓██▓▒░
+ ░▒▓██████▓▒░      ▄▄██████▄▄      ░▒▓██████▓▒░
+ ░▒▓██▓▒░        ▄████████████▄        ░▒▓██▓▒░
+ ░▒▓██▓▒░       ███ ▀▄ ▓▓ ▄▀ ███       ░▒▓██▓▒░
+ ░▒▓██▓▒░       ███ ▓▓ ▼▼ ▓▓ ███       ░▒▓██▓▒░
+ ░▒▓██▓▒░        ▀████████████▀        ░▒▓██▓▒░
+  ░▒▓██▓▒░         ▀▀██████▀▀         ░▒▓██▓▒░
  
         ╔══════════════════════════════════╗
         ║    V  O  I  D     T  E  A  M     ║
@@ -65,9 +66,8 @@ def menu_utama():
             pilihan = input(" Pilih menu (1-3): ")
             
             if pilihan == '1':
-            void_scanner.run_scanner("VOID_ACCESS_GRANTED_2026")
-                print("\n[!] Sedang menginstall bahan...")
-                time.sleep(2)
+                # Bagian ini sekarang sudah sejajar dan rapi
+                void_scanner.run_scanner("VOID_ACCESS_GRANTED_2026")
             elif pilihan == '2':
                 print("\n[!] Menjalankan Script...")
                 time.sleep(2)
