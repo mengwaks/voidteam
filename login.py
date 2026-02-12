@@ -2,7 +2,12 @@ import os
 import time
 import sys
 import math
-import void_scanner
+
+# Tambahkan pengecekan import agar tidak langsung crash
+try:
+    import void_scanner
+except ImportError:
+    void_scanner = None
 
 PASSWORD_RAHASIA = "".join([chr(x) for x in [111, 109, 101, 110, 103, 103, 97, 110, 116, 101, 110, 103]])
 
@@ -40,11 +45,17 @@ def get_logo():
 def intro_animasi():
     try:
         sys.stdout.write("\033[?25l")
-        for i in range(100): 
+        for i in range(101): # Range 101 agar sampai angka 100
             sys.stdout.write("\033[H")
+            # Cetak Logo
             sys.stdout.write(rgb_text(get_logo(), i * 0.2)) 
+            # Cetak Persentase Loading tepat di bawah logo
+            loading_msg = f"\n\n          [ LOADING SYSTEM: {i}% ]"
+            sys.stdout.write(rgb_text(loading_msg, i * 0.2))
+            
             sys.stdout.flush()
             time.sleep(0.04)
+        print("\n") # Baris baru setelah selesai
     except KeyboardInterrupt:
         pass
     finally:
@@ -66,8 +77,17 @@ def menu_utama():
             pilihan = input(" Pilih menu (1-3): ")
             
             if pilihan == '1':
-                # Bagian ini sekarang sudah sejajar dan rapi
-                void_scanner.run_scanner("VOID_ACCESS_GRANTED_2026")
+                if void_scanner is not None:
+                    try:
+                        void_scanner.run_scanner("VOID_ACCESS_GRANTED_2026")
+                    except Exception as e:
+                        print(f"\n\033[1;31m[!] ERROR PADA FILE VOID_SCANNER: {e}\033[0m")
+                        time.sleep(3)
+                else:
+                    print("\n\033[1;31m[!] ERROR: File void_scanner.py tidak ditemukan!\033[0m")
+                    print("[!] Pastikan sudah melakukan 'git pull'.")
+                    time.sleep(3)
+                    
             elif pilihan == '2':
                 print("\n[!] Menjalankan Script...")
                 time.sleep(2)
