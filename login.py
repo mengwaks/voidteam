@@ -45,17 +45,17 @@ def get_logo():
 def intro_animasi():
     try:
         sys.stdout.write("\033[?25l")
-        for i in range(101): # Range 101 agar sampai angka 100
+        for i in range(101): # Progress 0 sampai 100
             sys.stdout.write("\033[H")
-            # Cetak Logo
+            # Cetak Logo RGB
             sys.stdout.write(rgb_text(get_logo(), i * 0.2)) 
-            # Cetak Persentase Loading tepat di bawah logo
+            # Cetak Persentase Loading RGB
             loading_msg = f"\n\n          [ LOADING SYSTEM: {i}% ]"
             sys.stdout.write(rgb_text(loading_msg, i * 0.2))
             
             sys.stdout.flush()
             time.sleep(0.04)
-        print("\n") # Baris baru setelah selesai
+        print("\n")
     except KeyboardInterrupt:
         pass
     finally:
@@ -79,6 +79,7 @@ def menu_utama():
             if pilihan == '1':
                 if void_scanner is not None:
                     try:
+                        # Menjalankan scanner
                         void_scanner.run_scanner("VOID_ACCESS_GRANTED_2026")
                     except Exception as e:
                         print(f"\n\033[1;31m[!] ERROR PADA FILE VOID_SCANNER: {e}\033[0m")
@@ -95,7 +96,7 @@ def menu_utama():
                 print("\nGood Bye, Master!")
                 sys.exit()
             else:
-                print(f"\n[!] Menu {pilihan} tidak ada.")
+                print(f"\n\033[1;31m[!] Menu {pilihan} tidak ada.\033[0m")
                 time.sleep(1)
         except KeyboardInterrupt:
             print("\nGood Bye, Master!")
