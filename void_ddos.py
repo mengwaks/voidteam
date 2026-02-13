@@ -1,7 +1,3 @@
-
-Folder highlights
-Scripts detail multiple Layer 7 attack methods: GoldenEye, HeavyPost, Doomsday, Phantom, and Oblivion, leveraging cache bypass and resource exhaustion.
-
 import socket
 import os
 import sys
