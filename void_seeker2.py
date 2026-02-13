@@ -7,6 +7,7 @@ import threading
 import json
 import ssl
 import urllib.request
+import re
 from queue import Queue
 
 # =========================
@@ -35,9 +36,9 @@ def get_logo():
   ░▒▓██▓▒░         ▀▀██████▀▀         ░▒▓██▓▒░
  
         ╔══════════════════════════════════╗
-        ║     V O I D - S E E K E R  V4    ║
+        ║     V O I D - S E E K E R  V7    ║
         ╚══════════════════════════════════╝
-           [ HYBRID: OSINT + BYPASS ATTACK ]
+           [ GOD EYE: API + CONTENT VERIFY ]
     """
 
 def clear():
@@ -51,53 +52,64 @@ def flush_input():
         pass
 
 # =========================
-# DATA & WORDLIST
+# INTELLIGENCE DATABASE
 # =========================
-CDN_RANGES = {
-    "CLOUDFLARE": ["104.", "172.64.", "172.65.", "172.66.", "172.67.", "108.162.", "162.15.", "190.93.", "198.41."],
-    "AKAMAI": ["23.", "104.", "184.", "2.16.", "2.23."],
-    "GOOGLE": ["34.", "35.", "104.154.", "104.196."],
-    "AWS": ["3.", "13.", "18.", "52.", "54."]
-}
-
-# Subdomain yang sering LUPA dipasang Cloudflare (Direct IP)
-BYPASS_LIST = [
-    "direct", "direct-connect", "ftp", "cpanel", "whm", "webmail",
-    "mail", "email", "smtp", "pop", "pop3", "imap",
-    "dev", "development", "test", "testing", "stage", "staging", "uat",
-    "admin", "administrator", "backend", "panel", "control",
-    "server", "server1", "vps", "root", "origin", "source",
-    "db", "mysql", "sql", "database", "phpmyadmin",
-    "api", "api-dev", "beta", "support", "billing", "portal",
-    "blog", "forum", "shop", "store", "m", "mobile",
-    "ns1", "ns2", "dns1", "dns2", "remote", "vpn", "gateway"
+CDN_RANGES = [
+    "104.", "172.64.", "172.65.", "172.66.", "172.67.", "108.162.", "162.15.", "190.93.", "198.41.", # Cloudflare
+    "23.", "104.", "184.", "2.16.", "2.23.", # Akamai
+    "34.", "35.", "104.154.", "104.196.", "35.190", # Google
+    "13.", "151.101.", "199.232.", "3.", "18.", "52.", "54." # AWS/Fastly
 ]
 
-def get_provider_status(ip):
-    for provider, prefixes in CDN_RANGES.items():
-        for prefix in prefixes:
-            if ip.startswith(prefix):
-                return provider
-    return "ORIGIN"
+def is_protected(ip):
+    for prefix in CDN_RANGES:
+        if ip.startswith(prefix):
+            return True
+    return False
 
 # =========================
-# LOGIC ENGINES
+# BIG DATA ENGINE
 # =========================
-def fetch_crt_sh(domain):
-    """Phase 1: OSINT"""
-    print(f" \033[1;34m[*] PHASE 1: Checking SSL History (OSINT)...\033[0m")
-    subdomains = set()
-    url = f"https://crt.sh/?q=%.{domain}&output=json"
-    
+def get_title(ip, host):
+    """Mencuri Judul Website dari IP langsung (Bypass DNS)"""
     try:
+        url = f"http://{ip}"
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'Mozilla/5.0', 'Host': host} # Spoof Host Header
+        )
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         
+        with urllib.request.urlopen(req, context=ctx, timeout=3) as response:
+            content = response.read().decode('utf-8', errors='ignore')
+            title = re.search(r'<title>(.*?)</title>', content, re.IGNORECASE)
+            if title:
+                return title.group(1).strip()
+    except:
+        pass
+    return None
+
+def fetch_omnisint(domain):
+    print(f" \033[1;34m[*] Mengakses Database OmniSint (Big Data)...\033[0m")
+    url = f"https://sonar.omnisint.io/subdomains/{domain}"
+    try:
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=15) as response:
             data = json.loads(response.read().decode())
-            
+        return data # List of subdomains
+    except:
+        return []
+
+def fetch_crt_sh(domain):
+    print(f" \033[1;34m[*] Mengakses Database SSL History...\033[0m")
+    subdomains = set()
+    url = f"https://crt.sh/?q=%.{domain}&output=json"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as response:
+            data = json.loads(response.read().decode())
         for entry in data:
             name_value = entry['name_value']
             for sub in name_value.split('\n'):
@@ -107,33 +119,47 @@ def fetch_crt_sh(domain):
     except:
         return []
 
-def worker(q, results, print_lock):
+# =========================
+# VERIFICATION WORKER
+# =========================
+def worker(q, results, print_lock, target_domain):
     while not q.empty():
-        full_url = q.get()
+        sub = q.get()
         
         with print_lock:
-            # Overwrite line visual
-            sys.stdout.write(f"\r\033[K \033[1;30m[-] Scanning: {full_url[:40]}...\033[0m")
+            sys.stdout.write(f"\r\033[K \033[1;30m[-] Analyzing: {sub[:40]}...\033[0m")
             sys.stdout.flush()
         
         try:
-            ip = socket.gethostbyname(full_url)
-            status = get_provider_status(ip)
+            ip = socket.gethostbyname(sub)
             
-            with print_lock:
-                if status == "ORIGIN":
-                    # KETEMU IP ASLI
+            # LOGIKA "GOD EYE":
+            # 1. IP tidak boleh CDN (Cloudflare dll)
+            # 2. Kita coba ambil konten dari IP itu.
+            
+            if not is_protected(ip):
+                # Ini kandidat kuat! Cek kontennya.
+                title = get_title(ip, target_domain)
+                
+                with print_lock:
                     sys.stdout.write(f"\r\033[K")
-                    print(f" \033[1;32m[ORIGIN] {full_url.ljust(35)} -> {ip}\033[0m")
-                    results.append((full_url, ip, "ORIGIN"))
-                else:
-                    # KETEMU CDN (Disimpan tapi tidak di-highlight)
-                    results.append((full_url, ip, status))
+                    # Tampilkan Kandidat
+                    if title:
+                        print(f" \033[1;41m[BOOM] {sub} -> {ip}\033[0m")
+                        print(f" \033[1;33m       Title: {title[:50]} (MATCHED)\033[0m")
+                        results.append((sub, ip, "CONFIRMED"))
+                    else:
+                        print(f" \033[1;32m[OPEN] {sub} -> {ip} (Not CDN)\033[0m")
+                        results.append((sub, ip, "POTENTIAL"))
+            else:
+                # CDN, abaikan
+                pass
+
         except:
             pass
             
         q.task_done()
-        time.sleep(0.02)
+        time.sleep(0.01)
 
 # =========================
 # MAIN MODULE
@@ -145,98 +171,79 @@ def run_seeker(key):
         clear()
         print(rgb_text(get_logo(), 5))
 
-        print("\n\033[1;36m[ HYBRID SEEKER PROTOCOL ]\033[0m")
-        print(" 1. Auto-Scan (OSINT + Brute Force Fallback)")
+        print("\n\033[1;36m[ GOD EYE PROTOCOL ]\033[0m")
+        print(" 1. Full Scan (API + Verification)")
         print(" 0. Back")
         
-        # PERBAIKAN LOGIKA INPUT AGAR TIDAK LEWAT
         try:
             choice = input("\n Select: ").strip()
-        except EOFError:
-            continue
+        except: continue
 
-        if choice == "0": 
-            return # Kembali ke menu utama
-
-        elif choice == "1":
-            # LOGIKA PENGUNCIAN: Paksa user input target, jangan balik ke menu
+        if choice == "0": return
+        if choice == "1":
             target = ""
             while not target:
-                try:
-                    target = input("\n Target Domain (e.g. site.com): ").strip()
-                    if not target:
-                        print(" \033[1;31m[!] Domain tidak boleh kosong!\033[0m")
-                except KeyboardInterrupt:
-                    return # Ijinkan keluar jika CTRL+C
-
+                target = input("\n Target Domain (e.g. site.com): ").strip()
+            
             print(f"\n\033[1;32m[+] TARGET: {target}\033[0m")
             
-            # --- PHASE 1: OSINT ---
-            osint_subs = fetch_crt_sh(target)
-            unique_targets = set(osint_subs)
+            # 1. GATHERING DATA (API)
+            subs_omni = fetch_omnisint(target)
+            subs_crt = fetch_crt_sh(target)
             
-            print(f" \033[1;32m[+] OSINT Result: {len(osint_subs)} subdomains found.\033[0m")
+            # Gabungkan dan bersihkan duplikat
+            all_subs = set(subs_omni + subs_crt)
             
-            # --- PHASE 2: ADDING BYPASS LIST ---
-            print(f" \033[1;34m[*] PHASE 2: Injecting 'Bypass List' (Common Leaks)...\033[0m")
-            for word in BYPASS_LIST:
-                unique_targets.add(f"{word}.{target}")
-                
-            total_targets = list(unique_targets)
-            print(f" \033[1;36m[+] TOTAL TARGETS TO SCAN: {len(total_targets)}\033[0m")
-            time.sleep(1)
+            # Tambahkan list manual "Wajib Tembus"
+            critical_list = ["direct", "ftp", "cpanel", "mail", "dev", "origin", "backend"]
+            for c in critical_list:
+                all_subs.add(f"{c}.{target}")
             
-            # --- PHASE 3: EXECUTION ---
-            print("\n\033[1;33m[+] EXECUTING SCAN...\033[0m")
+            total = list(all_subs)
+            print(f" \033[1;36m[+] DATA COLLECTED: {len(total)} Unique Subdomains\033[0m")
+            
+            if len(total) == 0:
+                print(" \033[1;31m[!] API Gagal / Target terlalu kecil. Coba lagi nanti.\033[0m")
+                time.sleep(2)
+                continue
+
+            print("\n\033[1;33m[+] STARTING VERIFICATION ENGINE...\033[0m")
             print("\033[1;30m--------------------------------------------------\033[0m")
             
             q = Queue()
             results = []
             print_lock = threading.Lock()
             
-            for sub in total_targets:
-                q.put(sub)
+            for s in total:
+                q.put(s)
                 
-            # 30 Threads
-            for _ in range(30):
-                t = threading.Thread(target=worker, args=(q, results, print_lock))
+            # 50 Threads
+            for _ in range(50):
+                t = threading.Thread(target=worker, args=(q, results, print_lock, target))
                 t.daemon = True
                 t.start()
-                
+            
             q.join()
             
-            # --- REPORT ---
+            # REPORT
             sys.stdout.write(f"\r\033[K")
             print("\033[1;30m--------------------------------------------------\033[0m")
             
-            origins = [r for r in results if r[2] == "ORIGIN"]
+            confirmed = [r for r in results if r[2] == "CONFIRMED"]
+            potential = [r for r in results if r[2] == "POTENTIAL"]
             
-            if origins:
-                print(f"\n\033[1;31m 💀 [ REPORT: BUNKER LEAKED ]\033[0m")
-                print(f" Ditemukan {len(origins)} IP ASLI (ORIGIN).")
+            if confirmed:
+                print(f"\n\033[1;31m 💀 [ JACKPOT: {len(confirmed)} REAL ORIGIN FOUND ]\033[0m")
+                print(" IP ini menampilkan website yang sama tapi TANPA Cloudflare!")
+                for sub, ip, _ in confirmed:
+                     print(f" -> {ip} ({sub})")
+            elif potential:
+                print(f"\n\033[1;32m ⚠️ [ WARNING: {len(potential)} POTENTIAL LEAKS ]\033[0m")
+                print(" IP ini bukan Cloudflare, tapi konten tidak terbaca. Cek manual!")
             else:
-                print(f"\n\033[1;32m 🛡️ [ REPORT: SECURE ]\033[0m")
-                print(" Semua subdomain yang dicek (OSINT + Common) terlindungi.")
+                print(f"\n\033[1;30m [ SECURE ] Target ini benar-benar kuat (Full Proxy).\033[0m")
 
-            # HOLD SCREEN (Biar hasil gak hilang)
-            while True:
-                print("\n 1. Scan Another Target")
-                print(" 2. Save Result")
-                print(" 0. Back")
-                sel = input(" Select: ").strip()
-                
-                if sel == "1": break # Break loop hold, balik ke loop menu (tapi karena logic, dia akan clear screen)
-                if sel == "0": return # Balik ke login.py
-                if sel == "2" and results:
-                    fname = f"hybrid_{target}.txt"
-                    with open(fname, "w") as f:
-                        for url, ip, stat in results:
-                            f.write(f"[{stat}] {url} -> {ip}\n")
-                    print(f"\033[1;32m[+] Saved: {fname}\033[0m")
-
-        else:
-            # Jika input ngaco (bukan 0 atau 1)
-            continue
+            input("\n Tekan Enter untuk kembali...")
 
 if __name__ == "__main__":
     print("[!] Load from login.py only")
