@@ -128,9 +128,6 @@ def worker(q, results, print_lock):
                     results.append((full_url, ip, "ORIGIN"))
                 else:
                     # KETEMU CDN (Disimpan tapi tidak di-highlight)
-                    # Uncomment bawah ini jika ingin lihat IP Cloudflare juga
-                    # sys.stdout.write(f"\r\033[K")
-                    # print(f" \033[1;33m[{status}] {full_url.ljust(35)} -> {ip}\033[0m")
                     results.append((full_url, ip, status))
         except:
             pass
@@ -144,88 +141,102 @@ def worker(q, results, print_lock):
 def run_seeker(key):
     if key != "VOID_ACCESS_GRANTED_2026": return
 
-    clear()
-    print(rgb_text(get_logo(), 5))
-
     while True:
-        flush_input()
+        clear()
+        print(rgb_text(get_logo(), 5))
+
         print("\n\033[1;36m[ HYBRID SEEKER PROTOCOL ]\033[0m")
         print(" 1. Auto-Scan (OSINT + Brute Force Fallback)")
         print(" 0. Back")
         
-        choice = input("\n Select: ").strip()
-        if choice == "0": return
-        if choice != "1": continue
+        # PERBAIKAN LOGIKA INPUT AGAR TIDAK LEWAT
+        try:
+            choice = input("\n Select: ").strip()
+        except EOFError:
+            continue
 
-        target = input("\n Target Domain (e.g. site.com): ").strip()
-        if not target: continue
+        if choice == "0": 
+            return # Kembali ke menu utama
 
-        print(f"\n\033[1;32m[+] TARGET: {target}\033[0m")
-        
-        # --- PHASE 1: OSINT ---
-        osint_subs = fetch_crt_sh(target)
-        unique_targets = set(osint_subs)
-        
-        print(f" \033[1;32m[+] OSINT Result: {len(osint_subs)} subdomains found.\033[0m")
-        
-        # --- PHASE 2: ADDING BYPASS LIST ---
-        # Selalu tambahkan list manual untuk memastikan target penting dicek
-        print(f" \033[1;34m[*] PHASE 2: Injecting 'Bypass List' (Common Leaks)...\033[0m")
-        for word in BYPASS_LIST:
-            unique_targets.add(f"{word}.{target}")
+        elif choice == "1":
+            # LOGIKA PENGUNCIAN: Paksa user input target, jangan balik ke menu
+            target = ""
+            while not target:
+                try:
+                    target = input("\n Target Domain (e.g. site.com): ").strip()
+                    if not target:
+                        print(" \033[1;31m[!] Domain tidak boleh kosong!\033[0m")
+                except KeyboardInterrupt:
+                    return # Ijinkan keluar jika CTRL+C
+
+            print(f"\n\033[1;32m[+] TARGET: {target}\033[0m")
             
-        total_targets = list(unique_targets)
-        print(f" \033[1;36m[+] TOTAL TARGETS TO SCAN: {len(total_targets)}\033[0m")
-        time.sleep(1)
-        
-        # --- PHASE 3: EXECUTION ---
-        print("\n\033[1;33m[+] EXECUTING SCAN...\033[0m")
-        print("\033[1;30m--------------------------------------------------\033[0m")
-        
-        q = Queue()
-        results = []
-        print_lock = threading.Lock()
-        
-        for sub in total_targets:
-            q.put(sub)
+            # --- PHASE 1: OSINT ---
+            osint_subs = fetch_crt_sh(target)
+            unique_targets = set(osint_subs)
             
-        # 30 Threads untuk kecepatan tinggi
-        for _ in range(30):
-            t = threading.Thread(target=worker, args=(q, results, print_lock))
-            t.daemon = True
-            t.start()
+            print(f" \033[1;32m[+] OSINT Result: {len(osint_subs)} subdomains found.\033[0m")
             
-        q.join()
-        
-        # --- REPORT ---
-        sys.stdout.write(f"\r\033[K")
-        print("\033[1;30m--------------------------------------------------\033[0m")
-        
-        origins = [r for r in results if r[2] == "ORIGIN"]
-        
-        if origins:
-            print(f"\n\033[1;31m 💀 [ REPORT: BUNKER LEAKED ]\033[0m")
-            print(f" Ditemukan {len(origins)} IP ASLI (ORIGIN).")
+            # --- PHASE 2: ADDING BYPASS LIST ---
+            print(f" \033[1;34m[*] PHASE 2: Injecting 'Bypass List' (Common Leaks)...\033[0m")
+            for word in BYPASS_LIST:
+                unique_targets.add(f"{word}.{target}")
+                
+            total_targets = list(unique_targets)
+            print(f" \033[1;36m[+] TOTAL TARGETS TO SCAN: {len(total_targets)}\033[0m")
+            time.sleep(1)
+            
+            # --- PHASE 3: EXECUTION ---
+            print("\n\033[1;33m[+] EXECUTING SCAN...\033[0m")
+            print("\033[1;30m--------------------------------------------------\033[0m")
+            
+            q = Queue()
+            results = []
+            print_lock = threading.Lock()
+            
+            for sub in total_targets:
+                q.put(sub)
+                
+            # 30 Threads
+            for _ in range(30):
+                t = threading.Thread(target=worker, args=(q, results, print_lock))
+                t.daemon = True
+                t.start()
+                
+            q.join()
+            
+            # --- REPORT ---
+            sys.stdout.write(f"\r\033[K")
+            print("\033[1;30m--------------------------------------------------\033[0m")
+            
+            origins = [r for r in results if r[2] == "ORIGIN"]
+            
+            if origins:
+                print(f"\n\033[1;31m 💀 [ REPORT: BUNKER LEAKED ]\033[0m")
+                print(f" Ditemukan {len(origins)} IP ASLI (ORIGIN).")
+            else:
+                print(f"\n\033[1;32m 🛡️ [ REPORT: SECURE ]\033[0m")
+                print(" Semua subdomain yang dicek (OSINT + Common) terlindungi.")
+
+            # HOLD SCREEN (Biar hasil gak hilang)
+            while True:
+                print("\n 1. Scan Another Target")
+                print(" 2. Save Result")
+                print(" 0. Back")
+                sel = input(" Select: ").strip()
+                
+                if sel == "1": break # Break loop hold, balik ke loop menu (tapi karena logic, dia akan clear screen)
+                if sel == "0": return # Balik ke login.py
+                if sel == "2" and results:
+                    fname = f"hybrid_{target}.txt"
+                    with open(fname, "w") as f:
+                        for url, ip, stat in results:
+                            f.write(f"[{stat}] {url} -> {ip}\n")
+                    print(f"\033[1;32m[+] Saved: {fname}\033[0m")
+
         else:
-            print(f"\n\033[1;32m 🛡️ [ REPORT: SECURE ]\033[0m")
-            print(" Semua subdomain yang dicek (OSINT + Common) terlindungi.")
-            print(" Target mungkin menggunakan Wildcard DNS atau infrastruktur baru.")
-
-        # HOLD SCREEN
-        while True:
-            print("\n 1. Scan Another Target")
-            print(" 2. Save Result")
-            print(" 0. Back")
-            sel = input(" Select: ").strip()
-            
-            if sel == "1": break
-            if sel == "0": return
-            if sel == "2" and results:
-                fname = f"hybrid_{target}.txt"
-                with open(fname, "w") as f:
-                    for url, ip, stat in results:
-                        f.write(f"[{stat}] {url} -> {ip}\n")
-                print(f"\033[1;32m[+] Saved: {fname}\033[0m")
+            # Jika input ngaco (bukan 0 atau 1)
+            continue
 
 if __name__ == "__main__":
     print("[!] Load from login.py only")
