@@ -9,6 +9,9 @@ import ssl
 import urllib.request
 from queue import Queue
 
+# =========================
+# VISUAL ENGINE
+# =========================
 def rgb_text(text, offset=0):
     FREQ = 0.08
     out = []
@@ -32,9 +35,9 @@ def get_logo():
   ░▒▓██▓▒░         ▀▀██████▀▀         ░▒▓██▓▒░
  
         ╔══════════════════════════════════╗
-        ║     V O I D - S E E K E R  V3    ║
+        ║     V O I D - S E E K E R  V4    ║
         ╚══════════════════════════════════╝
-           [ OSINT: SSL HISTORY ANALYZER ]
+           [ HYBRID: OSINT + BYPASS ATTACK ]
     """
 
 def clear():
@@ -47,12 +50,28 @@ def flush_input():
     except:
         pass
 
+# =========================
+# DATA & WORDLIST
+# =========================
 CDN_RANGES = {
     "CLOUDFLARE": ["104.", "172.64.", "172.65.", "172.66.", "172.67.", "108.162.", "162.15.", "190.93.", "198.41."],
     "AKAMAI": ["23.", "104.", "184.", "2.16.", "2.23."],
     "GOOGLE": ["34.", "35.", "104.154.", "104.196."],
     "AWS": ["3.", "13.", "18.", "52.", "54."]
 }
+
+# Subdomain yang sering LUPA dipasang Cloudflare (Direct IP)
+BYPASS_LIST = [
+    "direct", "direct-connect", "ftp", "cpanel", "whm", "webmail",
+    "mail", "email", "smtp", "pop", "pop3", "imap",
+    "dev", "development", "test", "testing", "stage", "staging", "uat",
+    "admin", "administrator", "backend", "panel", "control",
+    "server", "server1", "vps", "root", "origin", "source",
+    "db", "mysql", "sql", "database", "phpmyadmin",
+    "api", "api-dev", "beta", "support", "billing", "portal",
+    "blog", "forum", "shop", "store", "m", "mobile",
+    "ns1", "ns2", "dns1", "dns2", "remote", "vpn", "gateway"
+]
 
 def get_provider_status(ip):
     for provider, prefixes in CDN_RANGES.items():
@@ -62,11 +81,11 @@ def get_provider_status(ip):
     return "ORIGIN"
 
 # =========================
-# CORE LOGIC
+# LOGIC ENGINES
 # =========================
 def fetch_crt_sh(domain):
-    """Mengambil data subdomain dari Certificate Logs"""
-    print(f" \033[1;34m[*] Menghubungi Database SSL (crt.sh)...\033[0m")
+    """Phase 1: OSINT"""
+    print(f" \033[1;34m[*] PHASE 1: Checking SSL History (OSINT)...\033[0m")
     subdomains = set()
     url = f"https://crt.sh/?q=%.{domain}&output=json"
     
@@ -75,12 +94,8 @@ def fetch_crt_sh(domain):
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         
-        req = urllib.request.Request(
-            url, 
-            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        )
-        
-        with urllib.request.urlopen(req, context=ctx, timeout=15) as response:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
             data = json.loads(response.read().decode())
             
         for entry in data:
@@ -88,10 +103,8 @@ def fetch_crt_sh(domain):
             for sub in name_value.split('\n'):
                 if "*" not in sub and sub.endswith(domain):
                     subdomains.add(sub)
-        
         return list(subdomains)
-    except Exception as e:
-        print(f" \033[1;31m[!] Gagal mengambil data: {e}\033[0m")
+    except:
         return []
 
 def worker(q, results, print_lock):
@@ -99,7 +112,8 @@ def worker(q, results, print_lock):
         full_url = q.get()
         
         with print_lock:
-            sys.stdout.write(f"\r\033[K \033[1;30m[-] Checking: {full_url[:40]}...\033[0m")
+            # Overwrite line visual
+            sys.stdout.write(f"\r\033[K \033[1;30m[-] Scanning: {full_url[:40]}...\033[0m")
             sys.stdout.flush()
         
         try:
@@ -108,19 +122,25 @@ def worker(q, results, print_lock):
             
             with print_lock:
                 if status == "ORIGIN":
+                    # KETEMU IP ASLI
                     sys.stdout.write(f"\r\033[K")
                     print(f" \033[1;32m[ORIGIN] {full_url.ljust(35)} -> {ip}\033[0m")
                     results.append((full_url, ip, "ORIGIN"))
                 else:
-                    
-                    sys.stdout.write(f"\r\033[K")
-                    print(f" \033[1;33m[{status}] {full_url.ljust(35)} -> {ip}\033[0m")
+                    # KETEMU CDN (Disimpan tapi tidak di-highlight)
+                    # Uncomment bawah ini jika ingin lihat IP Cloudflare juga
+                    # sys.stdout.write(f"\r\033[K")
+                    # print(f" \033[1;33m[{status}] {full_url.ljust(35)} -> {ip}\033[0m")
+                    results.append((full_url, ip, status))
         except:
             pass
             
         q.task_done()
-        time.sleep(0.05)
+        time.sleep(0.02)
 
+# =========================
+# MAIN MODULE
+# =========================
 def run_seeker(key):
     if key != "VOID_ACCESS_GRANTED_2026": return
 
@@ -129,65 +149,79 @@ def run_seeker(key):
 
     while True:
         flush_input()
-        print("\n\033[1;36m[ OSINT DISCOVERY MODE ]\033[0m")
-        print(" Teknik ini tidak menebak, tapi melihat 'Sejarah SSL'.")
-        print(" Sangat efektif untuk menemukan subdomain tua yang lupa diproteksi.")
+        print("\n\033[1;36m[ HYBRID SEEKER PROTOCOL ]\033[0m")
+        print(" 1. Auto-Scan (OSINT + Brute Force Fallback)")
+        print(" 0. Back")
         
-        target = input("\n Target Domain (0 back): ").strip()
-        if target == "0": return
+        choice = input("\n Select: ").strip()
+        if choice == "0": return
+        if choice != "1": continue
+
+        target = input("\n Target Domain (e.g. site.com): ").strip()
         if not target: continue
 
         print(f"\n\033[1;32m[+] TARGET: {target}\033[0m")
         
-        start_time = time.time()
-        subs = fetch_crt_sh(target)
+        # --- PHASE 1: OSINT ---
+        osint_subs = fetch_crt_sh(target)
+        unique_targets = set(osint_subs)
         
-        if not subs:
-            print(" \033[1;31m[!] Tidak ditemukan history SSL atau target terlalu baru.\033[0m")
+        print(f" \033[1;32m[+] OSINT Result: {len(osint_subs)} subdomains found.\033[0m")
+        
+        # --- PHASE 2: ADDING BYPASS LIST ---
+        # Selalu tambahkan list manual untuk memastikan target penting dicek
+        print(f" \033[1;34m[*] PHASE 2: Injecting 'Bypass List' (Common Leaks)...\033[0m")
+        for word in BYPASS_LIST:
+            unique_targets.add(f"{word}.{target}")
+            
+        total_targets = list(unique_targets)
+        print(f" \033[1;36m[+] TOTAL TARGETS TO SCAN: {len(total_targets)}\033[0m")
+        time.sleep(1)
+        
+        # --- PHASE 3: EXECUTION ---
+        print("\n\033[1;33m[+] EXECUTING SCAN...\033[0m")
+        print("\033[1;30m--------------------------------------------------\033[0m")
+        
+        q = Queue()
+        results = []
+        print_lock = threading.Lock()
+        
+        for sub in total_targets:
+            q.put(sub)
+            
+        # 30 Threads untuk kecepatan tinggi
+        for _ in range(30):
+            t = threading.Thread(target=worker, args=(q, results, print_lock))
+            t.daemon = True
+            t.start()
+            
+        q.join()
+        
+        # --- REPORT ---
+        sys.stdout.write(f"\r\033[K")
+        print("\033[1;30m--------------------------------------------------\033[0m")
+        
+        origins = [r for r in results if r[2] == "ORIGIN"]
+        
+        if origins:
+            print(f"\n\033[1;31m 💀 [ REPORT: BUNKER LEAKED ]\033[0m")
+            print(f" Ditemukan {len(origins)} IP ASLI (ORIGIN).")
         else:
-            print(f" \033[1;32m[+] Ditemukan {len(subs)} subdomain unik dari database!\033[0m")
-            time.sleep(1)
-            
-            print(f"\033[1;33m[+] MEMERIKSA STATUS AKTIF...\033[0m")
-            print("\033[1;30m--------------------------------------------------\033[0m")
-            
-            q = Queue()
-            results = []
-            print_lock = threading.Lock()
-            
-            for s in subs:
-                q.put(s)
-                
-            for _ in range(20):
-                t = threading.Thread(target=worker, args=(q, results, print_lock))
-                t.daemon = True
-                t.start()
-                
-            q.join()
-            
-            sys.stdout.write(f"\r\033[K")
-            print("\033[1;30m--------------------------------------------------\033[0m")
-            
-            origins = [r for r in results if r[2] == "ORIGIN"]
-            
-            if origins:
-                print(f"\n\033[1;31m 💀 [ REPORT: BUNKER LEAKED ]\033[0m")
-                print(f" Ditemukan {len(origins)} IP ASLI yang terekspos.")
-                print(" Cek subdomain tua atau dev yang lupa dipasang Cloudflare.")
-            else:
-                print(f"\n\033[1;32m 🛡️ [ REPORT: CLEAN ]\033[0m")
-                print(" Semua subdomain historis yang aktif sudah terlindungi CDN.")
+            print(f"\n\033[1;32m 🛡️ [ REPORT: SECURE ]\033[0m")
+            print(" Semua subdomain yang dicek (OSINT + Common) terlindungi.")
+            print(" Target mungkin menggunakan Wildcard DNS atau infrastruktur baru.")
 
+        # HOLD SCREEN
         while True:
             print("\n 1. Scan Another Target")
             print(" 2. Save Result")
             print(" 0. Back")
-            choice = input(" Select: ").strip()
+            sel = input(" Select: ").strip()
             
-            if choice == "1": break
-            if choice == "0": return
-            if choice == "2" and 'results' in locals() and results:
-                fname = f"osint_{target}.txt"
+            if sel == "1": break
+            if sel == "0": return
+            if sel == "2" and results:
+                fname = f"hybrid_{target}.txt"
                 with open(fname, "w") as f:
                     for url, ip, stat in results:
                         f.write(f"[{stat}] {url} -> {ip}\n")
