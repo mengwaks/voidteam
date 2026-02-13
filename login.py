@@ -14,6 +14,11 @@ except ImportError:
     void_seeker = None
 
 try:
+    import void_seeker2
+except ImportError:
+    void_seeker2 = None
+
+try:
     import void_ddos
 except ImportError:
     void_ddos = None
@@ -87,7 +92,8 @@ def menu_utama():
         print("\033[1;30m========================================\033[0m")
         print(" 1. VOID-SCANNER (LEVEL C / X MAX)")
         print(" 2. VOID-SEEKER  (IP ORIGIN FINDER)")
-        print(" 3. VOID-DDoS    (BUNKER STRESSER)")
+        print(" 3. VOID-SEEKER2 (OSINT / SSL HISTORY)")
+        print(" 4. VOID-DDoS    (BUNKER STRESSER)")
         print(" 0. Exit")
         print("\033[1;30m========================================\033[0m")
 
@@ -113,6 +119,15 @@ def menu_utama():
             void_seeker.run_seeker("VOID_ACCESS_GRANTED_2026")
 
         elif choice == "3":
+            if void_seeker2 is None:
+                print("\n\033[1;31m[!] void_seeker2.py not found\033[0m")
+                time.sleep(2)
+                continue
+            flush_input()
+            time.sleep(0.2)
+            void_seeker2.run_seeker("VOID_ACCESS_GRANTED_2026")
+
+        elif choice == "4":
             if void_ddos is None:
                 print("\n\033[1;31m[!] void_ddos.py not found\033[0m")
                 time.sleep(2)
