@@ -3,6 +3,7 @@ import time
 import sys
 import math
 
+# --- IMPORT MODULES ---
 try:
     import void_scanner
 except ImportError:
@@ -23,14 +24,20 @@ try:
 except ImportError:
     void_ddos = None
 
+try:
+    import void_bypass
+except ImportError:
+    void_bypass = None
 
+
+# --- PASSWORD ---
 PASSWORD_RAHASIA = "".join(
     chr(x) for x in [111, 109, 101, 110, 103, 103, 97, 110, 116, 101, 110, 103]
 )
 
+# --- UTILS ---
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
-
 
 def flush_input():
     try:
@@ -38,7 +45,6 @@ def flush_input():
         termios.tcflush(sys.stdin, termios.TCIFLUSH)
     except:
         pass
-
 
 def rgb_text(text, offset=0):
     FREQ = 0.1
@@ -52,7 +58,6 @@ def rgb_text(text, offset=0):
         b = int(math.sin(FREQ * i + offset + 4) * 127 + 128)
         out.append(f"\033[38;2;{r};{g};{b}m{c}")
     return "".join(out) + "\033[0m"
-
 
 def get_logo():
     return r"""
@@ -69,7 +74,6 @@ def get_logo():
                   [ LOGIN CORE ]
     """
 
-
 def intro_animation():
     try:
         sys.stdout.write("\033[?25l")
@@ -82,7 +86,7 @@ def intro_animation():
     finally:
         sys.stdout.write("\033[?25h\033[0m")
 
-
+# --- MENU UTAMA ---
 def menu_utama():
     while True:
         clear_screen()
@@ -92,8 +96,9 @@ def menu_utama():
         print("\033[1;30m========================================\033[0m")
         print(" 1. VOID-SCANNER (LEVEL C / X MAX)")
         print(" 2. VOID-SEEKER  (IP ORIGIN FINDER)")
-        print(" 3. VOID-SEEKER2 (OSINT / SSL HISTORY)")
+        print(" 3. VOID-SEEKER2 (TITAN ENGINE V9)")
         print(" 4. VOID-DDoS    (BUNKER STRESSER)")
+        print(" 5. VOID-BYPASS  (DIRECT ORIGIN STRESSER)")
         print(" 0. Exit")
         print("\033[1;30m========================================\033[0m")
 
@@ -136,6 +141,15 @@ def menu_utama():
             time.sleep(0.2)
             void_ddos.run_ddos("VOID_ACCESS_GRANTED_2026")
 
+        elif choice == "5":
+            if void_bypass is None:
+                print("\n\033[1;31m[!] void_bypass.py not found\033[0m")
+                time.sleep(2)
+                continue
+            flush_input()
+            time.sleep(0.2)
+            void_bypass.run_bypass("VOID_ACCESS_GRANTED_2026")
+
         elif choice == "0":
             print("\n\033[1;31mSession terminated.\033[0m")
             sys.exit()
@@ -143,6 +157,7 @@ def menu_utama():
         else:
             continue
 
+# --- LOGIN ---
 def login():
     clear_screen()
     print("\033[1;36m")
