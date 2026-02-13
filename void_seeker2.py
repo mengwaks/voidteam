@@ -11,6 +11,14 @@ import re
 from queue import Queue
 
 # =========================
+# GLOBAL CONFIG
+# =========================
+THREAD_COUNT = 50
+SOCKET_TIMEOUT = 3
+
+socket.setdefaulttimeout(SOCKET_TIMEOUT)
+
+# =========================
 # VISUAL ENGINE
 # =========================
 def rgb_text(text, offset=0):
@@ -36,210 +44,184 @@ def get_logo():
   ░▒▓██▓▒░         ▀▀██████▀▀         ░▒▓██▓▒░
  
         ╔══════════════════════════════════╗
-        ║     V O I D - S E E K E R  V7    ║
+        ║     V O I D - S E E K E R  V8    ║
         ╚══════════════════════════════════╝
-           [ GOD EYE: API + CONTENT VERIFY ]
+           [ GOD EYE: ORIGIN DISCOVERY ]
     """
 
 def clear():
     os.system("cls" if os.name == "nt" else "clear")
 
-def flush_input():
-    try:
-        import termios
-        termios.tcflush(sys.stdin, termios.TCIFLUSH)
-    except:
-        pass
-
 # =========================
-# INTELLIGENCE DATABASE
+# CDN INTEL
 # =========================
-CDN_RANGES = [
-    "104.", "172.64.", "172.65.", "172.66.", "172.67.", "108.162.", "162.15.", "190.93.", "198.41.", # Cloudflare
-    "23.", "104.", "184.", "2.16.", "2.23.", "2.18.", "2.19.", "2.20.", "2.21.", "2.22.", # Akamai
+CDN_RANGES = (
+    "104.", "172.64.", "172.65.", "172.66.", "172.67.",
+    "108.162.", "162.15.", "190.93.", "198.41.",   # Cloudflare
+    "23.", "184.", "2.16.", "2.18.", "2.19.", "2.20.", "2.21.", "2.22.",  # Akamai
     "34.", "35.", "104.154.", "104.196.", "35.190", # Google
     "13.", "151.101.", "199.232.", "3.", "18.", "52.", "54." # AWS/Fastly
-]
+)
 
-def is_protected(ip):
-    for prefix in CDN_RANGES:
-        if ip.startswith(prefix):
-            return True
-    return False
+def is_protected(ip: str) -> bool:
+    return ip.startswith(CDN_RANGES)
 
 # =========================
-# BIG DATA ENGINE
+# DATA SOURCES
 # =========================
-def get_title(ip, host):
-    """Mencuri Judul Website dari IP langsung"""
+def fetch_omnisint(domain):
+    print("\033[1;34m[*] OmniSint lookup...\033[0m")
     try:
-        url = f"http://{ip}"
-        req = urllib.request.Request(
-            url, 
-            headers={'User-Agent': 'Mozilla/5.0', 'Host': host} 
-        )
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        
-        with urllib.request.urlopen(req, context=ctx, timeout=3) as response:
-            content = response.read().decode('utf-8', errors='ignore')
-            title = re.search(r'<title>(.*?)</title>', content, re.IGNORECASE)
-            if title:
-                return title.group(1).strip()
+        with urllib.request.urlopen(
+            f"https://sonar.omnisint.io/subdomains/{domain}",
+            timeout=20
+        ) as r:
+            return json.loads(r.read().decode())
+    except:
+        return []
+
+def fetch_crtsh(domain):
+    print("\033[1;34m[*] crt.sh lookup...\033[0m")
+    subs = set()
+    try:
+        with urllib.request.urlopen(
+            f"https://crt.sh/?q=%.{domain}&output=json",
+            timeout=20
+        ) as r:
+            data = json.loads(r.read().decode())
+        for row in data:
+            for s in row.get("name_value", "").splitlines():
+                if "*" not in s and s.endswith(domain):
+                    subs.add(s)
     except:
         pass
-    return None
-
-def fetch_omnisint(domain):
-    print(f" \033[1;34m[*] Mengakses Database OmniSint (Big Data)...\033[0m")
-    url = f"https://sonar.omnisint.io/subdomains/{domain}"
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=20) as response:
-            data = json.loads(response.read().decode())
-        return data 
-    except:
-        return []
-
-def fetch_crt_sh(domain):
-    print(f" \033[1;34m[*] Mengakses Database SSL History...\033[0m")
-    subdomains = set()
-    url = f"https://crt.sh/?q=%.{domain}&output=json"
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=20) as response:
-            data = json.loads(response.read().decode())
-        for entry in data:
-            name_value = entry['name_value']
-            for sub in name_value.split('\n'):
-                if "*" not in sub and sub.endswith(domain):
-                    subdomains.add(sub)
-        return list(subdomains)
-    except:
-        return []
+    return list(subs)
 
 # =========================
-# VERIFICATION WORKER
+# VERIFICATION
 # =========================
-def worker(q, results, print_lock, target_domain):
-    while not q.empty():
-        sub = q.get()
-        
-        with print_lock:
-            sys.stdout.write(f"\r\033[K \033[1;30m[-] Analyzing: {sub[:40]}...\033[0m")
-            sys.stdout.flush()
-        
+def grab_title(ip, host):
+    try:
+        req = urllib.request.Request(
+            f"http://{ip}",
+            headers={"Host": host, "User-Agent": "Mozilla/5.0"}
+        )
+        ctx = ssl._create_unverified_context()
+        with urllib.request.urlopen(req, context=ctx, timeout=SOCKET_TIMEOUT) as r:
+            html = r.read().decode(errors="ignore")
+        m = re.search(r"<title>(.*?)</title>", html, re.I)
+        return m.group(1).strip() if m else None
+    except:
+        return None
+
+# =========================
+# WORKER ENGINE
+# =========================
+def worker(queue, results, lock, stats, target):
+    while True:
+        try:
+            sub = queue.get_nowait()
+        except:
+            return
+
         try:
             ip = socket.gethostbyname(sub)
-            
             if not is_protected(ip):
-                title = get_title(ip, target_domain)
-                
-                with print_lock:
-                    sys.stdout.write(f"\r\033[K")
+                title = grab_title(ip, target)
+                with lock:
                     if title:
-                        print(f" \033[1;41m[BOOM] {sub} -> {ip}\033[0m")
-                        print(f" \033[1;33m       Title: {title[:50]} (MATCHED)\033[0m")
-                        results.append((sub, ip, "CONFIRMED"))
+                        print(f"\033[1;41m[BOOM]\033[0m {sub} -> {ip}")
+                        results.append(("CONFIRMED", sub, ip, title))
                     else:
-                        print(f" \033[1;32m[OPEN] {sub} -> {ip} (Not CDN)\033[0m")
-                        results.append((sub, ip, "POTENTIAL"))
+                        print(f"\033[1;32m[OPEN]\033[0m {sub} -> {ip}")
+                        results.append(("POTENTIAL", sub, ip, None))
         except:
             pass
-            
-        q.task_done()
-        time.sleep(0.01)
+        finally:
+            with lock:
+                stats["done"] += 1
+            queue.task_done()
 
 # =========================
-# MAIN MODULE
+# MAIN CORE
 # =========================
 def run_seeker(key):
-    if key != "VOID_ACCESS_GRANTED_2026": return
+    if key != "VOID_ACCESS_GRANTED_2026":
+        return
 
     while True:
         clear()
         print(rgb_text(get_logo(), 5))
-
         print("\n\033[1;36m[ GOD EYE PROTOCOL ]\033[0m")
-        print(" 1. Full Scan (API + Verification)")
-        print(" 0. Back")
-        
-        flush_input() # FIX: Bersihkan sisa input sebelumnya
-        choice = input("\n Select: ").strip()
+        print(" 1. Full Origin Scan")
+        print(" 0. Exit")
 
+        choice = input("\n Select: ").strip()
         if choice == "0":
             return
-            
-        elif choice == "1":
-            target = ""
-            # FIX: Loop ini memastikan input domain tidak bisa diskip
-            while not target:
-                flush_input() 
-                target = input("\n Target Domain (e.g. site.com): ").strip()
-                if not target:
-                    print(" \033[1;31m[!] Domain tidak boleh kosong!\033[0m")
-            
-            print(f"\n\033[1;32m[+] TARGET: {target}\033[0m")
-            
-            # --- START SCANNING ---
-            subs_omni = fetch_omnisint(target)
-            subs_crt = fetch_crt_sh(target)
-            
-            all_subs = set(subs_omni + subs_crt)
-            
-            # Manual List Wajib
-            critical_list = ["direct", "ftp", "cpanel", "mail", "dev", "origin", "backend", "webmail", "smtp"]
-            for c in critical_list:
-                all_subs.add(f"{c}.{target}")
-            
-            total = list(all_subs)
-            print(f" \033[1;36m[+] DATA COLLECTED: {len(total)} Unique Subdomains\033[0m")
-            
-            if len(total) == 0:
-                print(" \033[1;31m[!] API Gagal / Target terlalu kecil. Coba lagi nanti.\033[0m")
-                time.sleep(2)
-                continue # Balik ke menu jika gagal
+        if choice != "1":
+            continue
 
-            print("\n\033[1;33m[+] STARTING VERIFICATION ENGINE...\033[0m")
-            print("\033[1;30m--------------------------------------------------\033[0m")
-            
-            q = Queue()
-            results = []
-            print_lock = threading.Lock()
-            
-            for s in total:
-                q.put(s)
-                
-            # Threads
-            for _ in range(50):
-                t = threading.Thread(target=worker, args=(q, results, print_lock, target))
-                t.daemon = True
-                t.start()
-            
-            q.join()
-            
-            # REPORT
-            sys.stdout.write(f"\r\033[K")
-            print("\033[1;30m--------------------------------------------------\033[0m")
-            
-            confirmed = [r for r in results if r[2] == "CONFIRMED"]
-            potential = [r for r in results if r[2] == "POTENTIAL"]
-            
-            if confirmed:
-                print(f"\n\033[1;31m 💀 [ JACKPOT: {len(confirmed)} REAL ORIGIN FOUND ]\033[0m")
-                for sub, ip, _ in confirmed:
-                     print(f" -> {ip} ({sub})")
-            elif potential:
-                print(f"\n\033[1;32m ⚠️ [ WARNING: {len(potential)} POTENTIAL LEAKS ]\033[0m")
-                print(" IP ini bukan Cloudflare. Cek manual!")
-                for sub, ip, _ in potential:
-                     print(f" -> {ip} ({sub})")
-            else:
-                print(f"\n\033[1;30m [ SECURE ] Target ini benar-benar kuat (Full Proxy).\033[0m")
+        target = input("\n Target domain: ").strip()
+        if not target:
+            continue
 
-            # Pause agar hasil tidak hilang
-            input("\n Tekan Enter untuk kembali...")
+        print(f"\n\033[1;32m[+] TARGET LOCKED: {target}\033[0m")
 
+        subs = set(fetch_omnisint(target) + fetch_crtsh(target))
+        for x in ("direct","ftp","cpanel","mail","dev","origin","backend","smtp"):
+            subs.add(f"{x}.{target}")
+
+        if not subs:
+            print("\033[1;31m[!] No data collected.\033[0m")
+            input(" Enter...")
+            continue
+
+        q = Queue()
+        for s in subs:
+            q.put(s)
+
+        results = []
+        stats = {"done": 0}
+        lock = threading.Lock()
+
+        print(f"\n\033[1;33m[+] Verifying {len(subs)} subdomains...\033[0m")
+
+        for _ in range(THREAD_COUNT):
+            threading.Thread(
+                target=worker,
+                args=(q, results, lock, stats, target),
+                daemon=True
+            ).start()
+
+        while stats["done"] < len(subs):
+            with lock:
+                sys.stdout.write(
+                    f"\r\033[1;30mProgress: {stats['done']}/{len(subs)}\033[0m"
+                )
+                sys.stdout.flush()
+            time.sleep(0.2)
+
+        print("\n\n\033[1;30m================ RESULT ================\033[0m")
+
+        confirmed = [r for r in results if r[0] == "CONFIRMED"]
+        potential = [r for r in results if r[0] == "POTENTIAL"]
+
+        if confirmed:
+            print(f"\033[1;31m💀 REAL ORIGIN FOUND: {len(confirmed)}\033[0m")
+            for _, s, ip, t in confirmed:
+                print(f" -> {ip} ({s}) | {t[:60]}")
+        elif potential:
+            print(f"\033[1;32m⚠ POTENTIAL LEAKS: {len(potential)}\033[0m")
+            for _, s, ip, _ in potential:
+                print(f" -> {ip} ({s})")
+        else:
+            print("\033[1;36m✔ FULLY PROXIED / HARD TARGET\033[0m")
+
+        input("\n Press Enter to return to menu...")
+
+# =========================
+# ENTRY
+# =========================
 if __name__ == "__main__":
     print("[!] Load from login.py only")
