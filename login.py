@@ -3,22 +3,26 @@ import time
 import sys
 import math
 
-# =========================
-# SAFE IMPORT
-# =========================
 try:
     import void_scanner
 except ImportError:
     void_scanner = None
+
+try:
+    import void_seeker
+except ImportError:
+    void_seeker = None
+
+try:
+    import void_ddos
+except ImportError:
+    void_ddos = None
 
 
 PASSWORD_RAHASIA = "".join(
     chr(x) for x in [111, 109, 101, 110, 103, 103, 97, 110, 116, 101, 110, 103]
 )
 
-# =========================
-# CORE UTILS
-# =========================
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
@@ -31,9 +35,6 @@ def flush_input():
         pass
 
 
-# =========================
-# VISUAL ENGINE
-# =========================
 def rgb_text(text, offset=0):
     FREQ = 0.1
     out = []
@@ -58,9 +59,9 @@ def get_logo():
   ░▒▓██▓▒░         ▀▀██████▀▀         ░▒▓██▓▒░
  
         ╔══════════════════════════════════╗
-        ║     V O I D   T E A M            ║
+        ║      V O I D   T E A M           ║
         ╚══════════════════════════════════╝
-            [ LOGIN CORE / LEVEL MAX ]
+                  [ LOGIN CORE ]
     """
 
 
@@ -77,9 +78,6 @@ def intro_animation():
         sys.stdout.write("\033[?25h\033[0m")
 
 
-# =========================
-# MENU SYSTEM
-# =========================
 def menu_utama():
     while True:
         clear_screen()
@@ -87,8 +85,9 @@ def menu_utama():
 
         print("\n\033[1;32m[ MAIN MENU ]\033[0m")
         print("\033[1;30m========================================\033[0m")
-        print(" 1. VOID‑SCANNER  (LEVEL C / X MAX)")
-        print(" 2. Placeholder")
+        print(" 1. VOID-SCANNER (LEVEL C / X MAX)")
+        print(" 2. VOID-SEEKER  (IP ORIGIN FINDER)")
+        print(" 3. VOID-DDoS    (BUNKER STRESSER)")
         print(" 0. Exit")
         print("\033[1;30m========================================\033[0m")
 
@@ -100,14 +99,27 @@ def menu_utama():
                 print("\n\033[1;31m[!] void_scanner.py not found\033[0m")
                 time.sleep(2)
                 continue
-
             flush_input()
-            time.sleep(0.2)  # HARD FIX input hantu
+            time.sleep(0.2)
             void_scanner.run_scanner("VOID_ACCESS_GRANTED_2026")
 
         elif choice == "2":
-            print("\n\033[1;33m[!] Feature not implemented yet\033[0m")
-            time.sleep(1.5)
+            if void_seeker is None:
+                print("\n\033[1;31m[!] void_seeker.py not found\033[0m")
+                time.sleep(2)
+                continue
+            flush_input()
+            time.sleep(0.2)
+            void_seeker.run_seeker("VOID_ACCESS_GRANTED_2026")
+
+        elif choice == "3":
+            if void_ddos is None:
+                print("\n\033[1;31m[!] void_ddos.py not found\033[0m")
+                time.sleep(2)
+                continue
+            flush_input()
+            time.sleep(0.2)
+            void_ddos.run_ddos("VOID_ACCESS_GRANTED_2026")
 
         elif choice == "0":
             print("\n\033[1;31mSession terminated.\033[0m")
@@ -116,10 +128,6 @@ def menu_utama():
         else:
             continue
 
-
-# =========================
-# LOGIN CORE
-# =========================
 def login():
     clear_screen()
     print("\033[1;36m")
