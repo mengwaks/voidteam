@@ -95,7 +95,7 @@ def monitor():
 
 # --- EXECUTION ---
 setup_ui()
-domain = input("\033[1;36m [?] Domain Target (pastigacorbos.site): \033[0m").replace("https://", "").replace("http://", "").split('/')[0]
+domain = input("\033[1;36m [?] Domain Target (domain.com): \033[0m").replace("https://", "").replace("http://", "").split('/')[0]
 threads = int(input("\033[1;36m [?] Threads (Rekomendasi 1000+): \033[0m"))
 
 threading.Thread(target=monitor, daemon=True).start()
