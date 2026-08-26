@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VOID ULTIMATE SCANNER v2.1 - Full-Spectrum Web Vulnerability Scanner
+VOID ULTIMATE SCANNER v3.0 - Full-Spectrum Web Vulnerability Scanner
 HANYA UNTUK PENGUJIAN DI LINGKUNGAN ANDA SENDIRI
 """
 
@@ -11,8 +11,6 @@ import time
 import json
 import socket
 import random
-import string
-import hashlib
 import urllib.parse
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs, urljoin, quote_plus
@@ -20,8 +18,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 try:
     import requests
-    from requests.adapters import HTTPAdapter
-    from requests.packages.urllib3.util.retry import Retry
 except ImportError:
     os.system("pip install requests")
     import requests
@@ -29,7 +25,7 @@ except ImportError:
 # ========================================
 # KONFIGURASI
 # ========================================
-VERSION = "2.1"
+VERSION = "3.0"
 TIMEOUT = 10
 MAX_THREADS = 30
 STEALTH_MODE = True
@@ -54,9 +50,6 @@ COMMON_DIRS_FILES = [
     "config.php", "database.php", "db.php", "backup.sql", "dump.sql", "adminer.php"
 ]
 
-# ========================================
-# PAYLOADS
-# ========================================
 SQLI_PAYLOADS = [
     "'", "\"", "' OR '1'='1", "' OR 1=1--", "' UNION SELECT NULL--",
     "' AND SLEEP(3)--", "' OR BENCHMARK(5000000,MD5('a'))--",
@@ -97,7 +90,7 @@ OPEN_REDIRECT_PAYLOADS = [
 def print_banner():
     print("""
    ╔═══════════════════════════════════════════════════════╗
-   ║     V O I D   U L T I M A T E   S C A N N E R  v2.1  ║
+   ║     V O I D   U L T I M A T E   S C A N N E R  v3.0  ║
    ║   Full-Spectrum Web Security Assessment Tool          ║
    ╚═══════════════════════════════════════════════════════╝
     """)
@@ -105,7 +98,7 @@ def print_banner():
 def get_random_ua():
     return random.choice(USER_AGENTS)
 
-def safe_request(url, method="GET", params=None, data=None, files=None, timeout=TIMEOUT):
+def safe_request(url, method="GET", params=None, data=None, files=None, allow_redirects=True, timeout=TIMEOUT):
     try:
         headers = {"User-Agent": get_random_ua()}
         if STEALTH_MODE:
@@ -115,9 +108,9 @@ def safe_request(url, method="GET", params=None, data=None, files=None, timeout=
                 "Connection": "keep-alive"
             })
         if method.upper() == "GET":
-            r = requests.get(url, params=params, headers=headers, timeout=timeout)
+            r = requests.get(url, params=params, headers=headers, timeout=timeout, allow_redirects=allow_redirects)
         else:
-            r = requests.post(url, data=data, files=files, headers=headers, timeout=timeout)
+            r = requests.post(url, data=data, files=files, headers=headers, timeout=timeout, allow_redirects=allow_redirects)
         if STEALTH_MODE:
             time.sleep(random.uniform(0.3, 1.2))
         return r
@@ -171,7 +164,6 @@ def recon(target):
                     open_ports.append(port)
         result["ports"] = open_ports
         print(f"  Open ports: {', '.join(map(str, open_ports)) if open_ports else 'None'}")
-    # HTTP Headers
     for proto in ["https", "http"]:
         try:
             r = safe_request(f"{proto}://{target}", timeout=5)
@@ -340,7 +332,7 @@ def test_open_redirect(target, proto, params):
     return findings
 
 # ========================================
-# MODUL AUTO-EXPLOIT (Ringan)
+# MODUL AUTO-EXPLOIT
 # ========================================
 def auto_exploit(target, proto, results):
     print(f"\n\033[1;33m[+] AUTO-EXPLOITATION (safe)\033[0m")
@@ -393,7 +385,6 @@ def generate_report(target, results):
             "low_risk": len(results.get("ssti", [])) + len(results.get("open_redirect", []))
         }
     }
-    # Convert set to list
     report_serializable = to_serializable(report)
     filename = f"scan_{target}_{int(time.time())}.json"
     with open(filename, "w") as f:
